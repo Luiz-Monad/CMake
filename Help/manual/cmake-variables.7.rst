@@ -146,6 +146,9 @@ Variables that Provide Information
    /variable/PROJECT_VERSION_MINOR
    /variable/PROJECT_VERSION_PATCH
    /variable/PROJECT_VERSION_TWEAK
+   /variable/VC_MDD
+   /variable/VC_MDD_ANDROID
+   /variable/VC_MDD_ANDROID_VERSION
 
 Variables that Change Behavior
 ==============================
@@ -320,6 +323,8 @@ Variables that Describe the System
    /variable/WINDOWS_STORE
    /variable/XCODE
    /variable/XCODE_VERSION
+   /variable/VC_MDD_ANDROID
+   /variable/VC_MDD_ANDROID_VERSION
 
 Variables that Control the Build
 ================================

@@ -54,6 +54,9 @@ public:
   bool IsNsightTegra() const;
   std::string GetNsightTegraVersion() const;
 
+  const char* GetAndroidMDDVersion();
+  bool IsAndroidMDDInstalled();
+
   /** The vctargets path for the target platform.  */
   const char* GetCustomVCTargetsPath() const;
 
@@ -160,6 +163,7 @@ protected:
   virtual bool InitializeWindowsStore(cmMakefile* mf);
   virtual bool InitializeTegraAndroid(cmMakefile* mf);
   virtual bool InitializeAndroid(cmMakefile* mf);
+  virtual bool InitializeAndroidMDD(cmMakefile* mf);
 
   virtual bool ProcessGeneratorToolsetField(std::string const& key,
                                             std::string const& value);
@@ -202,6 +206,7 @@ protected:
   bool SystemIsWindowsPhone = false;
   bool SystemIsWindowsStore = false;
   bool SystemIsAndroid = false;
+  bool SystemIsAndroidMDD = false;
 
 private:
   class Factory;

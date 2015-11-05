@@ -666,3 +666,20 @@ the next rules to make device + simulator configuration work:
 
 - Use :command:`find_package` only for libraries installed with
   :variable:`CMAKE_IOS_INSTALL_COMBINED` feature
+
+Cross Compiling using Visual C++ for Mobile Development (Android support)
+-----------------------------------------
+
+A toolchain file to configure a Visual Studio generator to
+build using Visual C++ for Mobile Development targeting Android may look
+like this:
+
+.. code-block:: cmake
+
+  set(CMAKE_SYSTEM_NAME VCMDDAndroid)
+  set(CMAKE_SYSTEM_VERSION 1.0)
+
+See the :prop_tgt:`VC_MDD_ANDROID_USE_OF_STL`, :prop_tgt:`VC_MDD_ANDROID_API_LEVEL`
+and :prop_tgt:`VC_MDD_ANDROID_PLATFORM_TOOLSET` target properties
+to configure targets within the project.
+

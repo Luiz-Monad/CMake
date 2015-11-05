@@ -35,6 +35,7 @@ protected:
   bool InitializeWindowsStore(cmMakefile* mf) override;
   bool InitializeAndroid(cmMakefile* mf) override;
   bool SelectWindowsStoreToolset(std::string& toolset) const override;
+  bool InitializeAndroidMDD(cmMakefile* mf);
 
   // These aren't virtual because we need to check if the selected version
   // of the toolset is installed

@@ -802,7 +802,20 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       fprintf(fout, "set(CMAKE_RUNTIME_OUTPUT_DIRECTORY \"%s\")\n",
               this->BinaryDirectory.c_str());
       /* Create the actual executable.  */
-      fprintf(fout, "add_executable(%s", targetName.c_str());
+      std::string outputType = this->Makefile->GetSafeDefinition(
+                                          "CMAKE_TRY_COMPILE_OUTPUT_TYPE");
+      if (outputType == "shared")
+        {
+        fprintf(fout, "add_library(%s SHARED ", targetName.c_str());
+        }
+      else if (outputType == "static")
+        {
+        fprintf(fout, "add_library(%s STATIC ", targetName.c_str());
+        }
+      else
+        {
+        fprintf(fout, "add_executable(%s", targetName.c_str());
+        }
     } else // if (targetType == cmStateEnums::STATIC_LIBRARY)
     {
       /* Put the static library at a known location (for COPY_FILE).  */
@@ -1038,6 +1051,8 @@ void cmCoreTryCompile::FindOutputFile(const std::string& targetName,
   this->OutputFile.clear();
   std::string tmpOutputFile = "/";
   if (targetType == cmStateEnums::EXECUTABLE) {
+    tmpOutputFile +=this->Makefile->GetSafeDefinition(
+                                        "CMAKE_TRY_COMPILE_EXECUTABLE_PREFIX");
     tmpOutputFile += targetName;
     tmpOutputFile +=
       this->Makefile->GetSafeDefinition("CMAKE_EXECUTABLE_SUFFIX");

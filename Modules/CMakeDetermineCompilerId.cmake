@@ -397,6 +397,16 @@ Id flags: ${testflags} ${CMAKE_${lang}_COMPILER_ID_FLAGS_ALWAYS}
     endif()
     set(id_dir ${CMAKE_${lang}_COMPILER_ID_DIR})
     set(id_src "${src}")
+    if(CMAKE_SYSTEM_NAME STREQUAL "VCMDDAndroid")
+      set(id_system "<ApplicationType>Android</ApplicationType>")
+      if(CMAKE_SYSTEM_VERSION)
+        set(id_system_version "<ApplicationTypeRevision>${CMAKE_SYSTEM_VERSION}</ApplicationTypeRevision>")
+      else()
+        set(id_system_version "<ApplicationTypeRevision>1.0</ApplicationTypeRevision>")
+      endif()
+      configure_file(${CMAKE_ROOT}/Modules/CompilerId/VS-Android.${ext}.in
+        ${id_dir}/CompilerId${lang}.${ext} @ONLY)
+    else()
     set(id_compile "ClCompile")
     if(id_cl_var)
       set(id_PostBuildEvent_Command "echo CMAKE_${lang}_COMPILER=$(${id_cl_var})")
@@ -434,6 +444,7 @@ Id flags: ${testflags} ${CMAKE_${lang}_COMPILER_ID_FLAGS_ALWAYS}
     endif()
     configure_file(${CMAKE_ROOT}/Modules/CompilerId/VS-${v}.${ext}.in
       ${id_dir}/CompilerId${lang}.${ext} @ONLY)
+    endif()
     if(CMAKE_VS_MSBUILD_COMMAND AND NOT lang STREQUAL "Fortran")
       set(command "${CMAKE_VS_MSBUILD_COMMAND}" "CompilerId${lang}.${ext}"
         "/p:Configuration=Debug" "/p:Platform=${id_platform}" "/p:VisualStudioVersion=${vs_version}.0"

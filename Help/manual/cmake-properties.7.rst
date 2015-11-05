@@ -422,6 +422,9 @@ Properties on Targets
    /prop_tgt/XCODE_SCHEME_WORKING_DIRECTORY
    /prop_tgt/XCODE_SCHEME_ZOMBIE_OBJECTS
    /prop_tgt/XCTEST
+   /prop_tgt/VC_MDD_ANDROID_USE_OF_STL
+   /prop_tgt/VC_MDD_ANDROID_API_LEVEL
+   /prop_tgt/VC_MDD_ANDROID_PLATFORM_TOOLSET
 
 .. _`Test Properties`:
 

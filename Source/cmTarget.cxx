@@ -175,6 +175,7 @@ public:
   bool IsDLLPlatform;
   bool IsAIX;
   bool IsAndroid;
+  bool IsAndroidMDD;
   bool IsImportedTarget;
   bool ImportedGloballyVisible;
   bool BuildInterfaceIncludesAppended;
@@ -238,6 +239,7 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
   impl->IsDLLPlatform = false;
   impl->IsAIX = false;
   impl->IsAndroid = false;
+  impl->IsAndroidMDD = false;
   impl->IsImportedTarget =
     (vis == VisibilityImported || vis == VisibilityImportedGlobally);
   impl->ImportedGloballyVisible = vis == VisibilityImportedGlobally;
@@ -258,6 +260,9 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
   // Check whether we are targeting an Android platform.
   impl->IsAndroid =
     (impl->Makefile->GetSafeDefinition("CMAKE_SYSTEM_NAME") == "Android");
+
+  impl->IsAndroidMDD =
+    (impl->Makefile->GetSafeDefinition("CMAKE_SYSTEM_NAME") == "VCMDDAndroid");
 
   std::string defKey;
   defKey.reserve(128);
@@ -378,6 +383,9 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
     initProp("DISABLE_PRECOMPILE_HEADERS");
     initProp("UNITY_BUILD");
     initProp("OPTIMIZE_DEPENDENCIES");
+    initProp("VC_MDD_ANDROID_USE_OF_STL");
+    initProp("VC_MDD_ANDROID_API_LEVEL");
+    initProp("VC_MDD_ANDROID_PLATFORM_TOOLSET");
     initPropValue("UNITY_BUILD_BATCH_SIZE", "8");
     initPropValue("UNITY_BUILD_MODE", "BATCH");
     initPropValue("PCH_WARN_INVALID", "ON");
@@ -408,11 +416,11 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
 #endif
   }
 
-  initProp("FOLDER");
+    initProp("FOLDER");
 
-  if (this->GetGlobalGenerator()->IsXcode()) {
-    initProp("XCODE_GENERATE_SCHEME");
-  }
+    if (this->GetGlobalGenerator()->IsXcode()) {
+      initProp("XCODE_GENERATE_SCHEME");
+    }
 
   // Setup per-configuration property default values.
   if (this->GetType() != cmStateEnums::UTILITY &&
@@ -526,26 +534,26 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
     initProp("DOTNET_TARGET_FRAMEWORK_VERSION");
   }
 
-  // check for "CMAKE_VS_GLOBALS" variable and set up target properties
-  // if any
+    // check for "CMAKE_VS_GLOBALS" variable and set up target properties
+    // if any
   cmProp globals = mf->GetDefinition("CMAKE_VS_GLOBALS");
-  if (globals) {
-    const std::string genName = mf->GetGlobalGenerator()->GetName();
-    if (cmHasLiteralPrefix(genName, "Visual Studio")) {
+    if (globals) {
+      const std::string genName = mf->GetGlobalGenerator()->GetName();
+      if (cmHasLiteralPrefix(genName, "Visual Studio")) {
       std::vector<std::string> props = cmExpandedList(*globals);
-      const std::string vsGlobal = "VS_GLOBAL_";
-      for (const std::string& i : props) {
-        // split NAME=VALUE
-        const std::string::size_type assignment = i.find('=');
-        if (assignment != std::string::npos) {
-          const std::string propName = vsGlobal + i.substr(0, assignment);
-          const std::string propValue = i.substr(assignment + 1);
-          initPropValue(propName, propValue.c_str());
+        const std::string vsGlobal = "VS_GLOBAL_";
+        for (const std::string& i : props) {
+          // split NAME=VALUE
+          const std::string::size_type assignment = i.find('=');
+          if (assignment != std::string::npos) {
+            const std::string propName = vsGlobal + i.substr(0, assignment);
+            const std::string propValue = i.substr(assignment + 1);
+            initPropValue(propName, propValue.c_str());
+          }
         }
       }
     }
   }
-}
 
 cmTarget::cmTarget(cmTarget&&) noexcept = default;
 cmTarget::~cmTarget() = default;
@@ -1341,7 +1349,7 @@ void cmTarget::SetProperty(const std::string& prop, const char* value)
     if (value) {
       impl->LanguageStandardProperties[prop] =
         BTs<std::string>(value, impl->Makefile->GetBacktrace());
-    } else {
+  } else {
       impl->LanguageStandardProperties.erase(prop);
     }
   } else {

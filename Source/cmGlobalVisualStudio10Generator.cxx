@@ -500,6 +500,11 @@ bool cmGlobalVisualStudio10Generator::InitializeSystem(cmMakefile* mf)
     if (!this->InitializeWindowsStore(mf)) {
       return false;
     }
+  } else if (this->SystemName == "VCMDDAndroid") {
+    this->SystemIsAndroidMDD = true;
+    if(!this->InitializeAndroidMDD(mf)) {
+      return false;
+    }
   } else if (this->SystemName == "Android") {
     if (this->PlatformInGeneratorName) {
       std::ostringstream e;
@@ -521,6 +526,14 @@ bool cmGlobalVisualStudio10Generator::InitializeSystem(cmMakefile* mf)
   }
 
   return true;
+}
+
+bool cmGlobalVisualStudio10Generator::InitializeAndroidMDD(cmMakefile* mf)
+{
+  std::ostringstream e;
+  e << this->GetName() << " does not support Android MDD.";
+  mf->IssueMessage(MessageType::FATAL_ERROR, e.str());
+  return false;
 }
 
 bool cmGlobalVisualStudio10Generator::InitializeWindows(cmMakefile*)
@@ -1491,4 +1504,24 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetNasmFlagTable() const
   std::string defaultName = this->ToolsetOptions.GetToolsetName(
     this->GetPlatformName(), this->DefaultNasmFlagTableName);
   return LoadFlagTable("", toolsetName, defaultName, "NASM");
+}
+
+const char* cmGlobalVisualStudio10Generator::GetAndroidMDDVersion()
+{
+  if (this->SystemVersion == "")
+    {
+    return "1.0";
+    }
+  return this->SystemVersion.c_str();
+}
+
+bool cmGlobalVisualStudio10Generator::IsAndroidMDDInstalled()
+{
+  std::string ideVersion = GetIDEVersion();
+  std::string installed;
+  cmSystemTools::ReadRegistryValue(
+    "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\DevDiv\\MDD\\Servicing\\" +
+    ideVersion + "\\CPlusPlusCore;"
+    "Install", installed, cmSystemTools::KeyWOW64_32);
+  return installed == "1";
 }
