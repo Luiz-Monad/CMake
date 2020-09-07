@@ -51,7 +51,7 @@ class cmGlobalVisualStudio10Generator::Factory
 {
 public:
   cmGlobalGenerator* CreateGlobalGenerator(const std::string& name,
-                                           cmake* cm) const CM_OVERRIDE
+                                           cmake* cm) const override
   {
     std::string genName;
     const char* p = cmVS10GenName(name, genName);
@@ -73,22 +73,22 @@ public:
     return 0;
   }
 
-  void GetDocumentation(cmDocumentationEntry& entry) const CM_OVERRIDE
+  void GetDocumentation(cmDocumentationEntry& entry) const override
   {
     entry.Name = std::string(vs10generatorName) + " [arch]";
     entry.Brief = "Generates Visual Studio 2010 project files.  "
                   "Optional [arch] can be \"Win64\" or \"IA64\".";
   }
 
-  void GetGenerators(std::vector<std::string>& names) const CM_OVERRIDE
+  void GetGenerators(std::vector<std::string>& names) const override
   {
     names.push_back(vs10generatorName);
     names.push_back(vs10generatorName + std::string(" IA64"));
     names.push_back(vs10generatorName + std::string(" Win64"));
   }
 
-  bool SupportsToolset() const CM_OVERRIDE { return true; }
-  bool SupportsPlatform() const CM_OVERRIDE { return true; }
+  bool SupportsToolset() const override { return true; }
+  bool SupportsPlatform() const override { return true; }
 };
 
 cmGlobalGeneratorFactory* cmGlobalVisualStudio10Generator::NewFactory()
@@ -420,14 +420,14 @@ bool cmGlobalVisualStudio10Generator::InitializeAndroidMDD(cmMakefile* mf)
 bool cmGlobalVisualStudio10Generator::SelectWindowsPhoneToolset(
   std::string& toolset) const
 {
-  toolset = "";
+  toolset.clear();
   return false;
 }
 
 bool cmGlobalVisualStudio10Generator::SelectWindowsStoreToolset(
   std::string& toolset) const
 {
-  toolset = "";
+  toolset.clear();
   return false;
 }
 
@@ -508,7 +508,7 @@ const char* cmGlobalVisualStudio10Generator::GetPlatformToolset() const
 {
   std::string const& toolset = this->GetPlatformToolsetString();
   if (toolset.empty()) {
-    return CM_NULLPTR;
+    return nullptr;
   }
   return toolset.c_str();
 }
@@ -532,7 +532,7 @@ cmGlobalVisualStudio10Generator::GetPlatformToolsetHostArchitecture() const
   if (!this->GeneratorToolsetHostArchitecture.empty()) {
     return this->GeneratorToolsetHostArchitecture.c_str();
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 const char* cmGlobalVisualStudio10Generator::GetPlatformToolsetCuda() const
@@ -540,7 +540,7 @@ const char* cmGlobalVisualStudio10Generator::GetPlatformToolsetCuda() const
   if (!this->GeneratorToolsetCuda.empty()) {
     return this->GeneratorToolsetCuda.c_str();
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 std::string const&
@@ -708,7 +708,12 @@ bool cmGlobalVisualStudio10Generator::FindVCTargetsPath(cmMakefile* mf)
         xw.Content(this->WindowsTargetPlatformVersion);
        xw.EndElement(); // WindowsTargetPlatformVersion
      }
-     if (this->GetPlatformName() == "ARM") {
+     if (this->GetPlatformName() == "ARM64") {
+       xw.StartElement("WindowsSDKDesktopARM64Support");
+        xw.Content("true");
+       xw.EndElement(); // WindowsSDK64DesktopARMSupport
+     }
+     else if (this->GetPlatformName() == "ARM") {
        xw.StartElement("WindowsSDKDesktopARMSupport");
         xw.Content("true");
        xw.EndElement(); // WindowsSDKDesktopARMSupport
@@ -984,7 +989,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetClFlagTable() const
   cmIDEFlagTable const* table = this->ToolsetOptions.GetClFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultClFlagTable;
+  return (table != nullptr) ? table : this->DefaultClFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetCSharpFlagTable()
@@ -993,7 +998,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetCSharpFlagTable()
   cmIDEFlagTable const* table = this->ToolsetOptions.GetCSharpFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultCSharpFlagTable;
+  return (table != nullptr) ? table : this->DefaultCSharpFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetRcFlagTable() const
@@ -1001,7 +1006,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetRcFlagTable() const
   cmIDEFlagTable const* table = this->ToolsetOptions.GetRcFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultRcFlagTable;
+  return (table != nullptr) ? table : this->DefaultRcFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetLibFlagTable() const
@@ -1009,7 +1014,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetLibFlagTable() const
   cmIDEFlagTable const* table = this->ToolsetOptions.GetLibFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultLibFlagTable;
+  return (table != nullptr) ? table : this->DefaultLibFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetLinkFlagTable() const
@@ -1017,7 +1022,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetLinkFlagTable() const
   cmIDEFlagTable const* table = this->ToolsetOptions.GetLinkFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultLinkFlagTable;
+  return (table != nullptr) ? table : this->DefaultLinkFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetCudaFlagTable() const
@@ -1036,7 +1041,7 @@ cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetMasmFlagTable() const
   cmIDEFlagTable const* table = this->ToolsetOptions.GetMasmFlagTable(
     this->GetPlatformName(), this->GetPlatformToolsetString());
 
-  return (table != CM_NULLPTR) ? table : this->DefaultMasmFlagTable;
+  return (table != nullptr) ? table : this->DefaultMasmFlagTable;
 }
 
 cmIDEFlagTable const* cmGlobalVisualStudio10Generator::GetNasmFlagTable() const
