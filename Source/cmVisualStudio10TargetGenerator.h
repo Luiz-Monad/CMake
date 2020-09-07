@@ -68,15 +68,20 @@ private:
   void WriteExtraSource(Elem& e1, cmSourceFile const* sf);
   void WriteNsightTegraConfigurationValues(Elem& e1,
                                            std::string const& config);
-  void WriteAndroidMDDConfigurationValues(std::string const& config);
+  void WriteAndroidMDDConfigurationValues(Elem& e1, 
+                                          std::string const& config);
   void WriteSource(Elem& e2, cmSourceFile const* sf);
   void WriteExcludeFromBuild(Elem& e2,
                              std::vector<size_t> const& exclude_configs);
   void WriteAllSources(Elem& e0);
+  void WritePackageReferences(Elem& e0);
+  void WritePackageReference(Elem& e1, std::string const& ref,
+                             std::string const& version);
   void WriteDotNetReferences(Elem& e0);
   void WriteDotNetReference(Elem& e1, std::string const& ref,
                             std::string const& hint,
                             std::string const& config);
+  void WriteImports(Elem& e0);
   void WriteDotNetReferenceCustomTags(Elem& e2, std::string const& ref);
   void WriteEmbeddedResourceGroup(Elem& e0);
   void WriteWinRTReferences(Elem& e0);
@@ -139,7 +144,7 @@ private:
                           std::string const& script,
                           std::string const& additional_inputs,
                           std::string const& outputs,
-                          std::string const& comment);
+                          std::string const& comment, bool symbolic);
   void WriteCustomRuleCSharp(Elem& e0, std::string const& config,
                              std::string const& commandName,
                              std::string const& script,
@@ -167,7 +172,7 @@ private:
   void WriteGroupSources(Elem& e0, std::string const& name,
                          ToolSources const& sources,
                          std::vector<cmSourceGroup>&);
-  void AddMissingSourceGroups(std::set<cmSourceGroup*>& groupsUsed,
+  void AddMissingSourceGroups(std::set<cmSourceGroup const*>& groupsUsed,
                               const std::vector<cmSourceGroup>& allGroups);
   bool IsResxHeader(const std::string& headerFile);
   bool IsXamlHeader(const std::string& headerFile);
@@ -213,7 +218,7 @@ private:
   bool AndroidMDD;
   bool TargetCompileAsWinRT;
   std::set<std::string> IPOEnabledConfigurations;
-  std::set<std::string> SpectreMitigationConfigurations;
+  std::map<std::string, std::string> SpectreMitigation;
   cmGlobalVisualStudio10Generator* const GlobalGenerator;
   cmLocalVisualStudio10Generator* const LocalGenerator;
   std::set<std::string> CSharpCustomCommandNames;

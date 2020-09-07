@@ -179,7 +179,7 @@ void cmGlobalVisualStudio14Generator::SetWindowsTargetPlatformVersion(
     std::ostringstream e;
     e << "Selecting Windows SDK version " << this->WindowsTargetPlatformVersion
       << " to target Windows " << this->SystemVersion << ".";
-    mf->DisplayStatus(e.str().c_str(), -1);
+    mf->DisplayStatus(e.str(), -1);
   }
   mf->AddDefinition("CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION",
                     this->WindowsTargetPlatformVersion.c_str());
@@ -330,31 +330,29 @@ std::string cmGlobalVisualStudio14Generator::GetWindows10SDKVersion()
   // Return an empty string
   return std::string();
 }
-//----------------------------------------------------------------------------
+
 bool cmGlobalVisualStudio14Generator::InitializeAndroidMDD(cmMakefile* mf)
 {
   if(this->DefaultPlatformName != "Win32" &&
      this->DefaultPlatformName != "ARM")
     {
     std::ostringstream e;
-    e << "Architecture not supported '" <<  this->DefaultPlatformName <<
+    e << "Architecture not supported '" << this->DefaultPlatformName <<
          "' for CMAKE_SYSTEM_NAME 'VCMDDAndroid'";
-    mf->IssueMessage(cmake::FATAL_ERROR, e.str());
+    mf->IssueMessage(MessageType::FATAL_ERROR, e.str());
     return false;
-    }
-  if(!this->IsAndroidMDDInstalled())
-    {
-    mf->IssueMessage(cmake::FATAL_ERROR,
+  }
+  if (!this->IsAndroidMDDInstalled()) {
+    mf->IssueMessage(MessageType::FATAL_ERROR,
         "CMAKE_SYSTEM_NAME is 'VCMDDAndroid' but "
         "'Visual C++ for Mobile Development (Android support)' "
         "is not installed.");
     return false;
-    }
-  if(this->DefaultPlatformName == "Win32")
-    {
+  }
+  if(this->DefaultPlatformName == "Win32") {
     this->DefaultPlatformName = "x86";
     this->DefaultPlatformToolset = "";
-    }
+  }
   mf->AddDefinition("VC_MDD", true);
   mf->AddDefinition("VC_MDD_ANDROID", true);
   const char* v = this->GetAndroidMDDVersion();

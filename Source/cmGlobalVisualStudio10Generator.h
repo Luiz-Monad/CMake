@@ -22,17 +22,14 @@ public:
   bool SetGeneratorPlatform(std::string const& p, cmMakefile* mf) override;
   bool SetGeneratorToolset(std::string const& ts, cmMakefile* mf) override;
 
-  void GenerateBuildCommand(GeneratedMakeCommand& makeCommand,
-                            const std::string& makeProgram,
-                            const std::string& projectName,
-                            const std::string& projectDir,
-                            const std::string& targetName,
-                            const std::string& config, bool fast, int jobs,
-                            bool verbose,
-                            std::vector<std::string> const& makeOptions =
-                              std::vector<std::string>()) override;
+  std::vector<GeneratedMakeCommand> GenerateBuildCommand(
+    const std::string& makeProgram, const std::string& projectName,
+    const std::string& projectDir, std::vector<std::string> const& targetNames,
+    const std::string& config, bool fast, int jobs, bool verbose,
+    std::vector<std::string> const& makeOptions =
+      std::vector<std::string>()) override;
 
-  ///! create the correct local generator
+  //! create the correct local generator
   cmLocalGenerator* CreateLocalGenerator(cmMakefile* mf) override;
 
   /**
@@ -47,6 +44,9 @@ public:
   /** Generating for Nsight Tegra VS plugin?  */
   bool IsNsightTegra() const;
   std::string GetNsightTegraVersion() const;
+
+  const char* GetAndroidMDDVersion();
+  bool IsAndroidMDDInstalled();
 
   /** The toolset name for the target platform.  */
   const char* GetPlatformToolset() const;
@@ -89,10 +89,6 @@ public:
   /** Return true if building for WindowsPhone */
   bool TargetsWindowsPhone() const { return this->SystemIsWindowsPhone; }
 
-  /** Return true if building for Android */
-  bool TargetsAndroidMDD() const
-    { return this->SystemIsAndroidMDD; }
-
   /** Return true if building for WindowsStore */
   bool TargetsWindowsStore() const { return this->SystemIsWindowsStore; }
 
@@ -117,8 +113,8 @@ public:
 
   static std::string GetInstalledNsightTegraVersion();
 
-  const char* GetAndroidMDDVersion();
-  bool IsAndroidMDDInstalled();
+  /** Return the first two components of CMAKE_SYSTEM_VERSION.  */
+  std::string GetApplicationTypeRevision() const;
 
   cmIDEFlagTable const* GetClFlagTable() const;
   cmIDEFlagTable const* GetCSharpFlagTable() const;

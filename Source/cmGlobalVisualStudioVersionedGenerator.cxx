@@ -211,8 +211,8 @@ class cmGlobalVisualStudioVersionedGenerator::Factory16
   : public cmGlobalGeneratorFactory
 {
 public:
-  virtual cmGlobalGenerator* CreateGlobalGenerator(const std::string& name,
-                                                   cmake* cm) const
+  cmGlobalGenerator* CreateGlobalGenerator(const std::string& name,
+                                           cmake* cm) const override
   {
     std::string genName;
     const char* p = cmVS16GenName(name, genName);
@@ -226,7 +226,7 @@ public:
     return 0;
   }
 
-  virtual void GetDocumentation(cmDocumentationEntry& entry) const
+  void GetDocumentation(cmDocumentationEntry& entry) const override
   {
     entry.Name = std::string(vs16generatorName);
     entry.Brief = "Generates Visual Studio 2019 project files.  "
@@ -388,13 +388,17 @@ std::string cmGlobalVisualStudioVersionedGenerator::GetAuxiliaryToolset() const
   if (version) {
     std::string instancePath;
     GetVSInstance(instancePath);
-    std::stringstream path;
-    path << instancePath;
-    path << "/VC/Auxiliary/Build/";
-    path << version;
-    path << "/Microsoft.VCToolsVersion." << version << ".props";
-
-    std::string toolsetPath = path.str();
+    std::string toolsetDir = instancePath + "/VC/Auxiliary/Build";
+    char sep = '/';
+    if (cmSystemTools::VersionCompareGreaterEq(version, "14.20")) {
+      std::string toolsetDot = toolsetDir + "." + version +
+        "/Microsoft.VCToolsVersion." + version + ".props";
+      if (cmSystemTools::PathExists(toolsetDot)) {
+        sep = '.';
+      }
+    }
+    std::string toolsetPath = toolsetDir + sep + version +
+      "/Microsoft.VCToolsVersion." + version + ".props";
     cmSystemTools::ConvertToUnixSlashes(toolsetPath);
     return toolsetPath;
   }
