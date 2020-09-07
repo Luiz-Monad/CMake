@@ -17,6 +17,7 @@
 #include "cmLocalNinjaGenerator.h"
 #include "cmNinjaTypes.h"
 #include "cmOutputConverter.h"
+#include "cmProperty.h"
 #include "cmSourceFile.h"
 #include "cmStateTypes.h"
 #include "cmStringAlgorithms.h"
@@ -110,9 +111,9 @@ void cmNinjaUtilityTargetGenerator::Generate(const std::string& config)
     std::string command =
       lg->BuildCommandLine(commands, "utility", this->GeneratorTarget);
     std::string desc;
-    const char* echoStr = genTarget->GetProperty("EchoString");
+    cmProp echoStr = genTarget->GetProperty("EchoString");
     if (echoStr) {
-      desc = echoStr;
+      desc = *echoStr;
     } else {
       desc = "Running utility command for " + this->GetTargetName();
     }

@@ -121,3 +121,26 @@ add_test(NAME testNotRun
   ]])
 run_TestRepeat(NotRun RETURN_VALUE:1 REPEAT UNTIL_PASS:3)
 unset(CASE_CMAKELISTS_SUFFIX_CODE)
+
+# test --stop-on-failure
+function(run_stop_on_failure)
+  set(CASE_CTEST_TEST_ARGS EXCLUDE RunCMakeVersion)
+  set(CASE_CMAKELISTS_SUFFIX_CODE [[
+add_test(NAME StoppingTest COMMAND ${CMAKE_COMMAND} -E false)
+add_test(NAME NotRunTest COMMAND ${CMAKE_COMMAND} -E true)
+  ]])
+
+  run_ctest_test(stop-on-failure STOP_ON_FAILURE)
+endfunction()
+run_stop_on_failure()
+
+# Make sure environment gets logged
+function(run_environment)
+  set(ENV{BAD_ENVIRONMENT_VARIABLE} "Bad environment variable")
+  set(CASE_CMAKELISTS_SUFFIX_CODE [[
+set_property(TEST RunCMakeVersion PROPERTY ENVIRONMENT "ENV1=env1;ENV2=env2")
+  ]])
+
+  run_ctest(TestEnvironment)
+endfunction()
+run_environment()

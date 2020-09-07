@@ -403,7 +403,6 @@ int cmCPackGenerator::InstallProjectViaInstalledDirectories(
       }
       /* rebuild symlinks in the installed tree */
       if (!symlinkedFiles.empty()) {
-        std::string curDir = cmSystemTools::GetCurrentWorkingDirectory();
         std::string goToDir = cmStrCat(tempDir, '/', subdir);
         cmCPackLogger(cmCPackLog::LOG_DEBUG,
                       "Change dir to: " << goToDir << std::endl);
@@ -442,7 +441,8 @@ int cmCPackGenerator::InstallProjectViaInstalledDirectories(
           }
         }
         cmCPackLogger(cmCPackLog::LOG_DEBUG,
-                      "Going back to: " << curDir << std::endl);
+                      "Going back to: " << workdir.GetOldDirectory()
+                                        << std::endl);
       }
     }
   }
@@ -921,11 +921,11 @@ int cmCPackGenerator::InstallCMakeProject(
     }
   }
 
-  if (nullptr != mf.GetDefinition("CPACK_ABSOLUTE_DESTINATION_FILES")) {
+  if (auto d = mf.GetDefinition("CPACK_ABSOLUTE_DESTINATION_FILES")) {
     if (!absoluteDestFiles.empty()) {
       absoluteDestFiles += ";";
     }
-    absoluteDestFiles += mf.GetDefinition("CPACK_ABSOLUTE_DESTINATION_FILES");
+    absoluteDestFiles += d;
     cmCPackLogger(cmCPackLog::LOG_DEBUG,
                   "Got some ABSOLUTE DESTINATION FILES: " << absoluteDestFiles
                                                           << std::endl);
@@ -936,8 +936,7 @@ int cmCPackGenerator::InstallCMakeProject(
         GetComponentInstallDirNameSuffix(component);
       if (nullptr != this->GetOption(absoluteDestFileComponent)) {
         std::string absoluteDestFilesListComponent =
-          cmStrCat(this->GetOption(absoluteDestFileComponent), ';',
-                   mf.GetDefinition("CPACK_ABSOLUTE_DESTINATION_FILES"));
+          cmStrCat(this->GetOption(absoluteDestFileComponent), ';', d);
         this->SetOption(absoluteDestFileComponent,
                         absoluteDestFilesListComponent.c_str());
       } else {
