@@ -530,7 +530,7 @@ std::vector<std::string> cmNinjaNormalTargetGenerator::ComputeLinkCmd()
         linkCmdVar = this->GeneratorTarget->GetFeatureSpecificLinkRuleVariable(
           linkCmdVar, this->TargetLinkLanguage, this->GetConfigName());
 
-        const char* linkCmd = mf->GetRequiredDefinition(linkCmdVar);
+        std::string const& linkCmd = mf->GetRequiredDefinition(linkCmdVar);
         cmSystemTools::ExpandListArgument(linkCmd, linkCmds);
       }
       {
@@ -541,7 +541,7 @@ std::vector<std::string> cmNinjaNormalTargetGenerator::ComputeLinkCmd()
         linkCmdVar = this->GeneratorTarget->GetFeatureSpecificLinkRuleVariable(
           linkCmdVar, this->TargetLinkLanguage, this->GetConfigName());
 
-        const char* linkCmd = mf->GetRequiredDefinition(linkCmdVar);
+        std::string const& linkCmd = mf->GetRequiredDefinition(linkCmdVar);
         cmSystemTools::ExpandListArgument(linkCmd, linkCmds);
       }
       return linkCmds;
@@ -558,6 +558,10 @@ std::vector<std::string> cmNinjaNormalTargetGenerator::ComputeLinkCmd()
 
 void cmNinjaNormalTargetGenerator::WriteDeviceLinkStatement()
 {
+  if (!this->GetGlobalGenerator()->GetLanguageEnabled("CUDA")) {
+    return;
+  }
+
   cmGeneratorTarget& genTarget = *this->GetGeneratorTarget();
 
   // determine if we need to do any device linking for this target
@@ -625,7 +629,7 @@ void cmNinjaNormalTargetGenerator::WriteDeviceLinkStatement()
   outputs.push_back(targetOutputReal);
   // Compute specific libraries to link with.
   cmNinjaDeps explicitDeps = this->GetObjects();
-  cmNinjaDeps implicitDeps = this->ComputeLinkDeps();
+  cmNinjaDeps implicitDeps = this->ComputeLinkDeps(this->TargetLinkLanguage);
 
   std::string frameworkPath;
   std::string linkPath;
@@ -794,7 +798,7 @@ void cmNinjaNormalTargetGenerator::WriteLinkStatement()
 
   // Compute specific libraries to link with.
   cmNinjaDeps explicitDeps = this->GetObjects();
-  cmNinjaDeps implicitDeps = this->ComputeLinkDeps();
+  cmNinjaDeps implicitDeps = this->ComputeLinkDeps(this->TargetLinkLanguage);
 
   if (!this->DeviceLinkObject.empty()) {
     explicitDeps.push_back(this->DeviceLinkObject);
@@ -956,7 +960,7 @@ void cmNinjaNormalTargetGenerator::WriteLinkStatement()
     preLinkCmdLines.push_back(std::move(cmd));
 
     // create a list of obj files for the -E __create_def to read
-    cmGeneratedFileStream fout(obj_list_file.c_str());
+    cmGeneratedFileStream fout(obj_list_file);
 
     if (mdi->WindowsExportAllSymbols) {
       cmNinjaDeps objs = this->GetObjects();

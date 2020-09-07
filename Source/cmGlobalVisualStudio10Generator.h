@@ -115,6 +115,8 @@ public:
 
   bool FindMakeProgram(cmMakefile* mf) override;
 
+  bool IsIPOSupported() const override { return true; }
+
   static std::string GetInstalledNsightTegraVersion();
 
   const char* GetAndroidMDDVersion();

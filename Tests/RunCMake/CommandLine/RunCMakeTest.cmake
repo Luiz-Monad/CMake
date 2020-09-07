@@ -3,12 +3,18 @@ cmake_minimum_required(VERSION 3.1)
 include(RunCMake)
 
 run_cmake_command(NoArgs ${CMAKE_COMMAND})
-run_cmake_command(C-no-arg ${CMAKE_COMMAND} -C)
-run_cmake_command(C-no-file ${CMAKE_COMMAND} -C nosuchcachefile.txt)
+run_cmake_command(Wizard ${CMAKE_COMMAND} -i)
+run_cmake_command(C-no-arg ${CMAKE_COMMAND} -B DummyBuildDir -C)
+run_cmake_command(C-no-file ${CMAKE_COMMAND} -B DummyBuildDir -C nosuchcachefile.txt)
+run_cmake_command(Cno-file ${CMAKE_COMMAND} -B DummyBuildDir -Cnosuchcachefile.txt)
 run_cmake_command(cache-no-file ${CMAKE_COMMAND} nosuchsubdir/CMakeCache.txt)
 run_cmake_command(lists-no-file ${CMAKE_COMMAND} nosuchsubdir/CMakeLists.txt)
-run_cmake_command(D-no-arg ${CMAKE_COMMAND} -D)
-run_cmake_command(U-no-arg ${CMAKE_COMMAND} -U)
+run_cmake_command(D-no-arg ${CMAKE_COMMAND} -B DummyBuildDir -D)
+run_cmake_command(D-no-src ${CMAKE_COMMAND} -B DummyBuildDir -D VAR=VALUE)
+run_cmake_command(Dno-src ${CMAKE_COMMAND} -B DummyBuildDir -DVAR=VALUE)
+run_cmake_command(U-no-arg ${CMAKE_COMMAND} -B DummyBuildDir -U)
+run_cmake_command(U-no-src ${CMAKE_COMMAND} -B DummyBuildDir -U VAR)
+run_cmake_command(Uno-src ${CMAKE_COMMAND} -B DummyBuildDir -UVAR)
 run_cmake_command(E-no-arg ${CMAKE_COMMAND} -E)
 run_cmake_command(E_capabilities ${CMAKE_COMMAND} -E capabilities)
 run_cmake_command(E_capabilities-arg ${CMAKE_COMMAND} -E capabilities --extra-arg)
@@ -26,8 +32,8 @@ run_cmake_command(E___run_co_compile-bad-iwyu ${CMAKE_COMMAND} -E __run_co_compi
 run_cmake_command(E___run_co_compile-no--- ${CMAKE_COMMAND} -E __run_co_compile --iwyu=iwyu-does-not-exist command-does-not-exist)
 run_cmake_command(E___run_co_compile-no-cc ${CMAKE_COMMAND} -E __run_co_compile --iwyu=iwyu-does-not-exist --)
 
-run_cmake_command(G_no-arg ${CMAKE_COMMAND} -G)
-run_cmake_command(G_bad-arg ${CMAKE_COMMAND} -G NoSuchGenerator)
+run_cmake_command(G_no-arg ${CMAKE_COMMAND} -B DummyBuildDir -G)
+run_cmake_command(G_bad-arg ${CMAKE_COMMAND} -B DummyBuildDir -G NoSuchGenerator)
 run_cmake_command(P_no-arg ${CMAKE_COMMAND} -P)
 run_cmake_command(P_no-file ${CMAKE_COMMAND} -P nosuchscriptfile.cmake)
 
@@ -46,6 +52,42 @@ run_cmake_command(cache-bad-entry
   ${CMAKE_COMMAND} --build ${RunCMake_SOURCE_DIR}/cache-bad-entry/)
 run_cmake_command(cache-empty-entry
   ${CMAKE_COMMAND} --build ${RunCMake_SOURCE_DIR}/cache-empty-entry/)
+
+function(run_ExplicitDirs)
+  set(source_dir ${RunCMake_BINARY_DIR}/ExplicitDirsMissing)
+
+  file(REMOVE_RECURSE "${source_dir}")
+  file(MAKE_DIRECTORY "${source_dir}")
+  file(WRITE ${source_dir}/CMakeLists.txt [=[
+cmake_minimum_required(VERSION 3.13)
+project(ExplicitDirsMissing LANGUAGES NONE)
+]=])
+  run_cmake_command(no-S-B ${CMAKE_COMMAND} -E chdir ${source_dir}
+    ${CMAKE_COMMAND} -DFOO=BAR)
+
+  set(source_dir ${RunCMake_SOURCE_DIR}/ExplicitDirs)
+  set(binary_dir ${RunCMake_BINARY_DIR}/ExplicitDirs-build)
+
+  file(REMOVE_RECURSE "${binary_dir}")
+  file(MAKE_DIRECTORY "${binary_dir}")
+  run_cmake_command(S-arg ${CMAKE_COMMAND} -S ${source_dir} ${binary_dir})
+  run_cmake_command(S-arg-reverse-order ${CMAKE_COMMAND} ${binary_dir} -S${source_dir} )
+  run_cmake_command(S-no-arg ${CMAKE_COMMAND} -S )
+  run_cmake_command(S-no-arg2 ${CMAKE_COMMAND} -S -T)
+  run_cmake_command(S-B ${CMAKE_COMMAND} -S ${source_dir} -B ${binary_dir})
+
+  # make sure that -B can explicitly construct build directories
+  file(REMOVE_RECURSE "${binary_dir}")
+  run_cmake_command(B-arg ${CMAKE_COMMAND} -B ${binary_dir} ${source_dir})
+  file(REMOVE_RECURSE "${binary_dir}")
+  run_cmake_command(B-arg-reverse-order ${CMAKE_COMMAND} ${source_dir} -B${binary_dir})
+  run_cmake_command(B-no-arg ${CMAKE_COMMAND} -B )
+  run_cmake_command(B-no-arg2 ${CMAKE_COMMAND} -B -T)
+  file(REMOVE_RECURSE "${binary_dir}")
+  run_cmake_command(B-S ${CMAKE_COMMAND} -B${binary_dir} -S${source_dir})
+
+endfunction()
+run_ExplicitDirs()
 
 function(run_BuildDir)
   # Use a single build tree for a few tests without cleaning.
@@ -101,32 +143,35 @@ if(RunCMake_GENERATOR STREQUAL "Ninja")
   unset(RunCMake_TEST_NO_CLEAN)
 endif()
 
-if(UNIX)
-  run_cmake_command(E_create_symlink-no-arg
-    ${CMAKE_COMMAND} -E create_symlink
-    )
-  run_cmake_command(E_create_symlink-missing-dir
-    ${CMAKE_COMMAND} -E create_symlink T missing-dir/L
-    )
+run_cmake_command(E_create_symlink-no-arg
+  ${CMAKE_COMMAND} -E create_symlink
+  )
+run_cmake_command(E_create_symlink-missing-dir
+  ${CMAKE_COMMAND} -E create_symlink T missing-dir/L
+  )
 
-  # Use a single build tree for a few tests without cleaning.
-  set(RunCMake_TEST_BINARY_DIR
-    ${RunCMake_BINARY_DIR}/E_create_symlink-broken-build)
-  set(RunCMake_TEST_NO_CLEAN 1)
-  file(REMOVE_RECURSE "${RunCMake_TEST_BINARY_DIR}")
-  run_cmake_command(E_create_symlink-broken-create
-    ${CMAKE_COMMAND} -E create_symlink T L
-    )
-  run_cmake_command(E_create_symlink-broken-replace
-    ${CMAKE_COMMAND} -E create_symlink . L
-    )
-  unset(RunCMake_TEST_BINARY_DIR)
-  unset(RunCMake_TEST_NO_CLEAN)
+# Use a single build tree for a few tests without cleaning.
+# These tests are special on Windows since it will only fail if the user
+# running the test does not have the priveldge to create symlinks. If this
+# happens we clear the msg in the -check.cmake and say that the test passes
+set(RunCMake_DEFAULT_stderr "(operation not permitted)?")
+set(RunCMake_TEST_BINARY_DIR
+  ${RunCMake_BINARY_DIR}/E_create_symlink-broken-build)
+set(RunCMake_TEST_NO_CLEAN 1)
+file(REMOVE_RECURSE "${RunCMake_TEST_BINARY_DIR}")
+run_cmake_command(E_create_symlink-broken-create
+  ${CMAKE_COMMAND} -E create_symlink T L
+  )
+run_cmake_command(E_create_symlink-broken-replace
+  ${CMAKE_COMMAND} -E create_symlink . L
+  )
+unset(RunCMake_TEST_BINARY_DIR)
+unset(RunCMake_TEST_NO_CLEAN)
+unset(RunCMake_DEFAULT_stderr)
 
-  run_cmake_command(E_create_symlink-no-replace-dir
-    ${CMAKE_COMMAND} -E create_symlink T .
-    )
-endif()
+run_cmake_command(E_create_symlink-no-replace-dir
+  ${CMAKE_COMMAND} -E create_symlink T .
+  )
 
 set(in ${RunCMake_SOURCE_DIR}/copy_input)
 set(out ${RunCMake_BINARY_DIR}/copy_output)
@@ -294,9 +339,9 @@ set(RunCMake_TEST_OPTIONS -Wdev -Wno-dev)
 run_cmake(Wno-dev)
 unset(RunCMake_TEST_OPTIONS)
 
-run_cmake_command(W_bad-arg1 ${CMAKE_COMMAND} -W)
-run_cmake_command(W_bad-arg2 ${CMAKE_COMMAND} -Wno-)
-run_cmake_command(W_bad-arg3 ${CMAKE_COMMAND} -Werror=)
+run_cmake_command(W_bad-arg1 ${CMAKE_COMMAND} -B DummyBuildDir -W)
+run_cmake_command(W_bad-arg2 ${CMAKE_COMMAND} -B DummyBuildDir -Wno-)
+run_cmake_command(W_bad-arg3 ${CMAKE_COMMAND} -B DummyBuildDir -Werror=)
 
 set(RunCMake_TEST_OPTIONS --debug-output)
 run_cmake(debug-output)
