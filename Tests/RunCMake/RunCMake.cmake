@@ -9,6 +9,10 @@ foreach(arg
 endforeach()
 
 function(run_cmake test)
+  if(DEFINED ENV{RunCMake_TEST_FILTER} AND NOT test MATCHES "$ENV{RunCMake_TEST_FILTER}")
+    return()
+  endif()
+
   set(top_src "${RunCMake_SOURCE_DIR}")
   set(top_bin "${RunCMake_BINARY_DIR}")
   if(EXISTS ${top_src}/${test}-result.txt)
@@ -45,6 +49,11 @@ function(run_cmake test)
     file(REMOVE_RECURSE "${RunCMake_TEST_BINARY_DIR}")
   endif()
   file(MAKE_DIRECTORY "${RunCMake_TEST_BINARY_DIR}")
+  if(RunCMake-prep-file AND EXISTS ${top_src}/${RunCMake-prep-file})
+    include(${top_src}/${RunCMake-prep-file})
+  else()
+    include(${top_src}/${test}-prep.cmake OPTIONAL)
+  endif()
   if(NOT DEFINED RunCMake_TEST_OPTIONS)
     set(RunCMake_TEST_OPTIONS "")
   endif()
@@ -73,9 +82,12 @@ function(run_cmake test)
     set(maybe_input_file "")
   endif()
   if(RunCMake_TEST_COMMAND)
+    if(NOT RunCMake_TEST_COMMAND_WORKING_DIRECTORY)
+      set(RunCMake_TEST_COMMAND_WORKING_DIRECTORY "${RunCMake_TEST_BINARY_DIR}")
+    endif()
     execute_process(
       COMMAND ${RunCMake_TEST_COMMAND}
-      WORKING_DIRECTORY "${RunCMake_TEST_BINARY_DIR}"
+      WORKING_DIRECTORY "${RunCMake_TEST_COMMAND_WORKING_DIRECTORY}"
       OUTPUT_VARIABLE actual_stdout
       ERROR_VARIABLE ${actual_stderr_var}
       RESULT_VARIABLE actual_result
