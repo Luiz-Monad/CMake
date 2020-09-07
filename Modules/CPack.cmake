@@ -325,7 +325,21 @@ The following variables are for advanced uses of CPack:
 
 .. variable:: CPACK_INSTALL_COMMANDS
 
-  Extra commands to install components.
+  Extra commands to install components.  The environment variable
+  ``CMAKE_INSTALL_PREFIX`` is set to the temporary install directory
+  during execution.
+
+.. variable:: CPACK_INSTALL_SCRIPTS
+
+  Extra CMake scripts executed by CPack during its local staging
+  installation, which is done right before packaging the files.
+  The scripts are not called by a standalone install (e.g.: ``make install``).
+  For every script, the following variables will be set:
+  :variable:`CMAKE_CURRENT_SOURCE_DIR`, :variable:`CMAKE_CURRENT_BINARY_DIR`
+  and :variable:`CMAKE_INSTALL_PREFIX` (which is set to the staging install
+  directory).  The singular form ``CMAKE_INSTALL_SCRIPT`` is supported as
+  an alternative variable for historical reasons, but its value is ignored if
+  ``CMAKE_INSTALL_SCRIPTS`` is set and a warning will be issued.
 
 .. variable:: CPACK_INSTALLED_DIRECTORIES
 
@@ -444,20 +458,23 @@ if(NOT DEFINED CPACK_PACKAGE_VERSION)
 endif()
 
 _cpack_set_default(CPACK_PACKAGE_VENDOR "Humanity")
+set(CPACK_DEFAULT_PACKAGE_DESCRIPTION_SUMMARY "${CMAKE_PROJECT_NAME} built using CMake")
 if(CMAKE_PROJECT_DESCRIPTION)
   _cpack_set_default(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "${CMAKE_PROJECT_DESCRIPTION}")
 else()
   _cpack_set_default(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-    "${CMAKE_PROJECT_NAME} built using CMake")
+    "${CPACK_DEFAULT_PACKAGE_DESCRIPTION_SUMMARY}")
 endif()
 if(CMAKE_PROJECT_HOMEPAGE_URL)
   _cpack_set_default(CPACK_PACKAGE_HOMEPAGE_URL
     "${CMAKE_PROJECT_HOMEPAGE_URL}")
 endif()
 
-_cpack_set_default(CPACK_PACKAGE_DESCRIPTION_FILE
+set(CPACK_DEFAULT_PACKAGE_DESCRIPTION_FILE
   "${CMAKE_ROOT}/Templates/CPack.GenericDescription.txt")
+_cpack_set_default(CPACK_PACKAGE_DESCRIPTION_FILE
+  "${CPACK_DEFAULT_PACKAGE_DESCRIPTION_FILE}")
 _cpack_set_default(CPACK_RESOURCE_FILE_LICENSE
   "${CMAKE_ROOT}/Templates/CPack.GenericLicense.txt")
 _cpack_set_default(CPACK_RESOURCE_FILE_README

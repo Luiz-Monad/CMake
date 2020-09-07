@@ -20,6 +20,10 @@ following variables will also be set:
 
 #]========================================]
 
+cmake_policy(PUSH)
+cmake_policy(SET CMP0054 NEW) # if() quoted variables not dereferenced
+cmake_policy(SET CMP0057 NEW) # if IN_LIST
+
 ### Common stuff ####
 set(PKG_CONFIG_VERSION 1)
 
@@ -214,7 +218,11 @@ function(_pkg_find_libs _prefix _no_cmake_path _no_cmake_environment_path)
                  NAMES ${_pkg_search}
                  ${_find_opts})
     mark_as_advanced(pkgcfg_lib_${_prefix}_${_pkg_search})
-    list(APPEND _libs "${pkgcfg_lib_${_prefix}_${_pkg_search}}")
+    if(pkgcfg_lib_${_prefix}_${_pkg_search})
+      list(APPEND _libs "${pkgcfg_lib_${_prefix}_${_pkg_search}}")
+    else()
+      list(APPEND _libs ${_pkg_search})
+    endif()
   endforeach()
 
   set(${_prefix}_LINK_LIBRARIES "${_libs}" PARENT_SCOPE)
@@ -356,6 +364,36 @@ macro(_pkg_restore_path_internal)
   unset(_pkgconfig_path_old)
 endmacro()
 
+# pkg-config returns -isystem include directories in --cflags-only-other,
+# depending on the version and if there is a space between -isystem and
+# the actual path
+function(_pkgconfig_extract_isystem _prefix)
+  set(cflags "${${_prefix}_CFLAGS_OTHER}")
+  set(outflags "")
+  set(incdirs "${${_prefix}_INCLUDE_DIRS}")
+
+  set(next_is_isystem FALSE)
+  foreach (THING IN LISTS cflags)
+    # This may filter "-isystem -isystem". That would not work anyway,
+    # so let it happen.
+    if (THING STREQUAL "-isystem")
+      set(next_is_isystem TRUE)
+      continue()
+    endif ()
+    if (next_is_isystem)
+      set(next_is_isystem FALSE)
+      list(APPEND incdirs "${THING}")
+    elseif (THING MATCHES "^-isystem")
+      string(SUBSTRING "${THING}" 8 -1 THING)
+      list(APPEND incdirs "${THING}")
+    else ()
+      list(APPEND outflags "${THING}")
+    endif ()
+  endforeach ()
+  set(${_prefix}_CFLAGS_OTHER "${outflags}" PARENT_SCOPE)
+  set(${_prefix}_INCLUDE_DIRS "${incdirs}" PARENT_SCOPE)
+endfunction()
+
 ###
 macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cmake_environment_path _imp_target _imp_target_global _prefix)
   _pkgconfig_unset(${_prefix}_FOUND)
@@ -363,6 +401,7 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
   _pkgconfig_unset(${_prefix}_PREFIX)
   _pkgconfig_unset(${_prefix}_INCLUDEDIR)
   _pkgconfig_unset(${_prefix}_LIBDIR)
+  _pkgconfig_unset(${_prefix}_MODULE_NAME)
   _pkgconfig_unset(${_prefix}_LIBS)
   _pkgconfig_unset(${_prefix}_LIBS_L)
   _pkgconfig_unset(${_prefix}_LIBS_PATHS)
@@ -480,6 +519,7 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
         foreach (variable IN ITEMS PREFIX INCLUDEDIR LIBDIR)
           _pkgconfig_set("${_pkg_check_prefix}_${variable}" "${${_pkg_check_prefix}_${variable}}")
         endforeach ()
+          _pkgconfig_set("${_pkg_check_prefix}_MODULE_NAME" "${_pkg_check_modules_pkg}")
 
         if (NOT ${_is_silent})
           message(STATUS "  Found ${_pkg_check_modules_pkg}, version ${_pkgconfig_VERSION}")
@@ -487,14 +527,18 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
       endforeach()
 
       # set variables which are combined for multiple modules
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LIBRARIES           "(^| )-l" --libs-only-l )
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LIBRARY_DIRS        "(^| )-L" --libs-only-L )
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LDFLAGS             ""        --libs )
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LDFLAGS_OTHER       ""        --libs-only-other )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LIBRARIES     "(^| )-l"             --libs-only-l )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LIBRARY_DIRS  "(^| )-L"             --libs-only-L )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LDFLAGS       ""                    --libs )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" LDFLAGS_OTHER ""                    --libs-only-other )
 
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" INCLUDE_DIRS        "(^| )-I" --cflags-only-I )
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" CFLAGS              ""        --cflags )
-      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" CFLAGS_OTHER        ""        --cflags-only-other )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" INCLUDE_DIRS  "(^| )(-I|-isystem ?)" --cflags-only-I )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" CFLAGS        ""                    --cflags )
+      _pkgconfig_invoke_dyn("${_pkg_check_modules_packages}" "${_prefix}" CFLAGS_OTHER  ""                    --cflags-only-other )
+
+      if (${_prefix}_CFLAGS_OTHER MATCHES "-isystem")
+        _pkgconfig_extract_isystem("${_prefix}")
+      endif ()
 
       _pkg_recalculate("${_prefix}" ${_no_cmake_path} ${_no_cmake_environment_path} ${_imp_target} ${_imp_target_global})
     endif()
@@ -664,6 +708,10 @@ endmacro()
                       [IMPORTED_TARGET [GLOBAL]]
                       <moduleSpec> [<moduleSpec>...])
 
+  If a module is found, the ``<prefix>_MODULE_NAME`` variable will contain the
+  name of the matching module. This variable can be used if you need to run
+  :command:`pkg_get_variable`.
+
   Example:
 
   .. code-block:: cmake
@@ -688,6 +736,7 @@ macro(pkg_search_module _prefix _module0)
 
       if (${_prefix}_FOUND)
         set(_pkg_modules_found 1)
+        break()
       endif()
     endforeach()
 
@@ -759,3 +808,5 @@ Variables Affecting Behavior
 ### Local Variables:
 ### mode: cmake
 ### End:
+
+cmake_policy(POP)

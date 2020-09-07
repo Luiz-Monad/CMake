@@ -182,7 +182,7 @@ void cmGlobalVisualStudio14Generator::SetWindowsTargetPlatformVersion(
     mf->DisplayStatus(e.str(), -1);
   }
   mf->AddDefinition("CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION",
-                    this->WindowsTargetPlatformVersion.c_str());
+                    this->WindowsTargetPlatformVersion);
 }
 
 bool cmGlobalVisualStudio14Generator::SelectWindowsStoreToolset(
@@ -353,8 +353,8 @@ bool cmGlobalVisualStudio14Generator::InitializeAndroidMDD(cmMakefile* mf)
     this->DefaultPlatformName = "x86";
     this->DefaultPlatformToolset = "";
   }
-  mf->AddDefinition("VC_MDD", true);
-  mf->AddDefinition("VC_MDD_ANDROID", true);
+  mf->AddDefinition("VC_MDD", "true");
+  mf->AddDefinition("VC_MDD_ANDROID", "true");
   const char* v = this->GetAndroidMDDVersion();
   mf->AddDefinition("VC_MDD_ANDROID_VERSION", v);
   return true;

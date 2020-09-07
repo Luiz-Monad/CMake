@@ -5,6 +5,10 @@
 GetPrerequisites
 ----------------
 
+.. deprecated:: 3.16
+
+  Use :command:`file(GET_RUNTIME_DEPENDENCIES)` instead.
+
 Functions to analyze and list executable file prerequisites.
 
 This module provides functions to list the .dll, .dylib or .so files
@@ -527,7 +531,7 @@ function(gp_resolved_file_type original_file file exepath dirs type_var)
       string(TOLOWER "$ENV{windir}" windir)
       file(TO_CMAKE_PATH "${windir}" windir)
 
-      if(lower MATCHES "^(${sysroot}/sys(tem|wow)|${windir}/sys(tem|wow)|(.*/)*(msvc|api-ms-win-)[^/]+dll)")
+      if(lower MATCHES "^(${sysroot}/sys(tem|wow)|${windir}/sys(tem|wow)|(.*/)*(msvc|api-ms-win-|vcruntime)[^/]+dll)")
         set(is_system 1)
       endif()
 
@@ -555,7 +559,7 @@ function(gp_resolved_file_type original_file file exepath dirs type_var)
           string(TOLOWER "${env_windir}" windir)
           string(TOLOWER "${env_sysdir}" sysroot)
 
-          if(lower MATCHES "^(${sysroot}/sys(tem|wow)|${windir}/sys(tem|wow)|(.*/)*(msvc|api-ms-win-)[^/]+dll)")
+          if(lower MATCHES "^(${sysroot}/sys(tem|wow)|${windir}/sys(tem|wow)|(.*/)*(msvc|api-ms-win-|vcruntime)[^/]+dll)")
             set(is_system 1)
           endif()
         endif()
@@ -597,7 +601,7 @@ function(gp_resolved_file_type original_file file exepath dirs type_var)
 
   if(NOT is_embedded)
     if(NOT IS_ABSOLUTE "${resolved_file}")
-      if(lower MATCHES "^(msvc|api-ms-win-)[^/]+dll" AND is_system)
+      if(lower MATCHES "^(msvc|api-ms-win-|vcruntime)[^/]+dll" AND is_system)
         message(STATUS "info: non-absolute msvc file '${file}' returning type '${type}'")
       else()
         message(STATUS "warning: gp_resolved_file_type non-absolute file '${file}' returning type '${type}' -- possibly incorrect")
@@ -706,7 +710,9 @@ function(get_prerequisites target prerequisites_var exclude_system recurse exepa
       find_program(gp_dumpbin "dumpbin" PATHS ${gp_cmd_paths})
       if(gp_dumpbin)
         set(gp_tool "dumpbin")
-      else() # Try harder. Maybe we're on MinGW
+      elseif(CMAKE_OBJDUMP) # Try harder. Maybe we're on MinGW
+        set(gp_tool "${CMAKE_OBJDUMP}")
+      else()
         set(gp_tool "objdump")
       endif()
     endif()
@@ -723,7 +729,7 @@ function(get_prerequisites target prerequisites_var exclude_system recurse exepa
 
   if(gp_tool MATCHES "ldd$")
     set(gp_cmd_args "")
-    set(gp_regex "^[\t ]*[^\t ]+ => ([^\t\(]+) .*${eol_char}$")
+    set(gp_regex "^[\t ]*[^\t ]+ =>[\t ]+([^\t\(]+)( \(.+\))?${eol_char}$")
     set(gp_regex_error "not found${eol_char}$")
     set(gp_regex_fallback "^[\t ]*([^\t ]+) => ([^\t ]+).*${eol_char}$")
     set(gp_regex_cmp_count 1)

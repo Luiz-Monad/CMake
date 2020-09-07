@@ -6,6 +6,7 @@
 #include "cmDocumentationEntry.h"
 #include "cmLocalVisualStudio10Generator.h"
 #include "cmMakefile.h"
+#include "cmStringAlgorithms.h"
 #include "cmVSSetupHelper.h"
 #include "cmake.h"
 
@@ -391,14 +392,16 @@ std::string cmGlobalVisualStudioVersionedGenerator::GetAuxiliaryToolset() const
     std::string toolsetDir = instancePath + "/VC/Auxiliary/Build";
     char sep = '/';
     if (cmSystemTools::VersionCompareGreaterEq(version, "14.20")) {
-      std::string toolsetDot = toolsetDir + "." + version +
-        "/Microsoft.VCToolsVersion." + version + ".props";
+      std::string toolsetDot =
+        cmStrCat(toolsetDir, '.', version, "/Microsoft.VCToolsVersion.",
+                 version, ".props");
       if (cmSystemTools::PathExists(toolsetDot)) {
         sep = '.';
       }
     }
-    std::string toolsetPath = toolsetDir + sep + version +
-      "/Microsoft.VCToolsVersion." + version + ".props";
+    std::string toolsetPath =
+      cmStrCat(toolsetDir, sep, version, "/Microsoft.VCToolsVersion.", version,
+               ".props");
     cmSystemTools::ConvertToUnixSlashes(toolsetPath);
     return toolsetPath;
   }

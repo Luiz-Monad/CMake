@@ -6,7 +6,11 @@ include(CheckCXXSourceCompiles)
 include(CMakeCheckCompilerFlagCommonPatterns)
 
 function(check_cxx_linker_flag _flag _var)
-  set(CMAKE_REQUIRED_LIBRARIES "${_flag}")
+  if(CMAKE_VERSION VERSION_LESS "3.14")
+    set(CMAKE_REQUIRED_LIBRARIES "${_flag}")
+  else()
+    set(CMAKE_REQUIRED_LINK_OPTIONS "${_flag}")
+  endif()
 
   # Normalize locale during test compilation.
   set(_locale_vars LC_ALL LC_MESSAGES LANG)
