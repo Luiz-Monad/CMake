@@ -40,6 +40,8 @@ static std::string const kCMAKE_CXX_LINK_NO_PIE_SUPPORTED =
   "CMAKE_CXX_LINK_NO_PIE_SUPPORTED";
 static std::string const kCMAKE_CXX_LINK_PIE_SUPPORTED =
   "CMAKE_CXX_LINK_PIE_SUPPORTED";
+static std::string const kCMAKE_CUDA_RUNTIME_LIBRARY =
+  "CMAKE_CUDA_RUNTIME_LIBRARY";
 static std::string const kCMAKE_ENABLE_EXPORTS = "CMAKE_ENABLE_EXPORTS";
 static std::string const kCMAKE_LINK_SEARCH_END_STATIC =
   "CMAKE_LINK_SEARCH_END_STATIC";
@@ -51,6 +53,8 @@ static std::string const kCMAKE_OSX_ARCHITECTURES = "CMAKE_OSX_ARCHITECTURES";
 static std::string const kCMAKE_OSX_DEPLOYMENT_TARGET =
   "CMAKE_OSX_DEPLOYMENT_TARGET";
 static std::string const kCMAKE_OSX_SYSROOT = "CMAKE_OSX_SYSROOT";
+static std::string const kCMAKE_APPLE_ARCH_SYSROOTS =
+  "CMAKE_APPLE_ARCH_SYSROOTS";
 static std::string const kCMAKE_POSITION_INDEPENDENT_CODE =
   "CMAKE_POSITION_INDEPENDENT_CODE";
 static std::string const kCMAKE_SYSROOT = "CMAKE_SYSROOT";
@@ -717,12 +721,14 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       vars.insert(kCMAKE_C_COMPILER_TARGET);
       vars.insert(kCMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN);
       vars.insert(kCMAKE_CXX_COMPILER_TARGET);
+      vars.insert(kCMAKE_CUDA_RUNTIME_LIBRARY);
       vars.insert(kCMAKE_ENABLE_EXPORTS);
       vars.insert(kCMAKE_LINK_SEARCH_END_STATIC);
       vars.insert(kCMAKE_LINK_SEARCH_START_STATIC);
       vars.insert(kCMAKE_OSX_ARCHITECTURES);
       vars.insert(kCMAKE_OSX_DEPLOYMENT_TARGET);
       vars.insert(kCMAKE_OSX_SYSROOT);
+      vars.insert(kCMAKE_APPLE_ARCH_SYSROOTS);
       vars.insert(kCMAKE_POSITION_INDEPENDENT_CODE);
       vars.insert(kCMAKE_SYSROOT);
       vars.insert(kCMAKE_SYSROOT_COMPILE);
@@ -1055,7 +1061,9 @@ void cmCoreTryCompile::CleanupFiles(std::string const& binDir)
       if (deletedFiles.insert(fileName).second) {
         std::string const fullPath =
           std::string(binDir).append("/").append(fileName);
-        if (cmSystemTools::FileIsDirectory(fullPath)) {
+        if (cmSystemTools::FileIsSymlink(fullPath)) {
+          cmSystemTools::RemoveFile(fullPath);
+        } else if (cmSystemTools::FileIsDirectory(fullPath)) {
           this->CleanupFiles(fullPath);
           cmSystemTools::RemoveADirectory(fullPath);
         } else {

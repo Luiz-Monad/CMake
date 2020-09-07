@@ -131,6 +131,7 @@ find_path(OPENSSL_INCLUDE_DIR
   ${_OPENSSL_ROOT_HINTS_AND_PATHS}
   HINTS
     ${_OPENSSL_INCLUDEDIR}
+    ${_OPENSSL_INCLUDE_DIRS}
   PATH_SUFFIXES
     include
 )
@@ -319,6 +320,7 @@ else()
     ${_OPENSSL_ROOT_HINTS_AND_PATHS}
     HINTS
       ${_OPENSSL_LIBDIR}
+      ${_OPENSSL_LIBRARY_DIRS}
     PATH_SUFFIXES
       lib
   )
@@ -330,6 +332,7 @@ else()
     ${_OPENSSL_ROOT_HINTS_AND_PATHS}
     HINTS
       ${_OPENSSL_LIBDIR}
+      ${_OPENSSL_LIBRARY_DIRS}
     PATH_SUFFIXES
       lib
   )
@@ -412,6 +415,17 @@ if(OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h")
     endif ()
 
     set(OPENSSL_VERSION "${OPENSSL_VERSION_MAJOR}.${OPENSSL_VERSION_MINOR}.${OPENSSL_VERSION_FIX}${OPENSSL_VERSION_PATCH_STRING}")
+  else ()
+    # Since OpenSSL 3.0.0, the new version format is MAJOR.MINOR.PATCH and
+    # a new OPENSSL_VERSION_STR macro contains exactly that
+    file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" OPENSSL_VERSION_STR
+         REGEX "^#[\t ]*define[\t ]+OPENSSL_VERSION_STR[\t ]+\"([0-9])+\\.([0-9])+\\.([0-9])+\".*")
+    string(REGEX REPLACE "^.*OPENSSL_VERSION_STR[\t ]+\"([0-9]+\\.[0-9]+\\.[0-9]+)\".*$"
+           "\\1" OPENSSL_VERSION_STR "${OPENSSL_VERSION_STR}")
+
+    set(OPENSSL_VERSION "${OPENSSL_VERSION_STR}")
+
+    unset(OPENSSL_VERSION_STR)
   endif ()
 endif ()
 
@@ -455,7 +469,7 @@ find_package_handle_standard_args(OpenSSL
     "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
 )
 
-mark_as_advanced(OPENSSL_INCLUDE_DIR OPENSSL_LIBRARIES)
+mark_as_advanced(OPENSSL_INCLUDE_DIR)
 
 if(OPENSSL_FOUND)
   if(NOT TARGET OpenSSL::Crypto AND

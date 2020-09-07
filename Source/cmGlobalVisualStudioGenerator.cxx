@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include <cm/iterator>
+#include <cm/memory>
 
 #include <windows.h>
 
@@ -166,7 +167,7 @@ void cmGlobalVisualStudioGenerator::WriteSLNHeader(std::ostream& fout)
       if (this->ExpressEdition) {
         fout << "# Visual Studio Express 16 for Windows Desktop\n";
       } else {
-        fout << "# Visual Studio 16\n";
+        fout << "# Visual Studio Version 16\n";
       }
       break;
   }
@@ -197,12 +198,12 @@ void cmGlobalVisualStudioGenerator::AddExtraIDETargets()
     if (!gen.empty()) {
       // Use no actual command lines so that the target itself is not
       // considered always out of date.
-      cmTarget* allBuild = gen[0]->GetMakefile()->AddUtilityCommand(
-        "ALL_BUILD", cmCommandOrigin::Generator, true, no_working_dir,
-        no_byproducts, no_depends, no_commands, false, "Build all projects");
+      cmTarget* allBuild = gen[0]->AddUtilityCommand(
+        "ALL_BUILD", true, no_working_dir, no_byproducts, no_depends,
+        no_commands, false, "Build all projects");
 
-      cmGeneratorTarget* gt = new cmGeneratorTarget(allBuild, gen[0]);
-      gen[0]->AddGeneratorTarget(gt);
+      gen[0]->AddGeneratorTarget(
+        cm::make_unique<cmGeneratorTarget>(allBuild, gen[0]));
 
       //
       // Organize in the "predefined targets" folder:
@@ -213,13 +214,13 @@ void cmGlobalVisualStudioGenerator::AddExtraIDETargets()
 
       // Now make all targets depend on the ALL_BUILD target
       for (cmLocalGenerator const* i : gen) {
-        for (cmGeneratorTarget* tgt : i->GetGeneratorTargets()) {
+        for (const auto& tgt : i->GetGeneratorTargets()) {
           if (tgt->GetType() == cmStateEnums::GLOBAL_TARGET ||
               tgt->IsImported()) {
             continue;
           }
-          if (!this->IsExcluded(gen[0], tgt)) {
-            allBuild->AddUtility(tgt->GetName());
+          if (!this->IsExcluded(gen[0], tgt.get())) {
+            allBuild->AddUtility(tgt->GetName(), false);
           }
         }
       }
@@ -308,7 +309,7 @@ void cmGlobalVisualStudioGenerator::CallVisualStudioMacro(
   if (!dir.empty()) {
     std::string macrosFile = dir + "/CMakeMacros/" CMAKE_VSMACROS_FILENAME;
     std::string nextSubkeyName;
-    if (cmSystemTools::FileExists(macrosFile.c_str()) &&
+    if (cmSystemTools::FileExists(macrosFile) &&
         IsVisualStudioMacrosFileRegistered(
           macrosFile, this->GetUserMacrosRegKeyBase(), nextSubkeyName)) {
       if (m == MacroReload) {
@@ -390,8 +391,8 @@ bool cmGlobalVisualStudioGenerator::ComputeTargetDepends()
   }
   for (auto const& it : this->ProjectMap) {
     for (const cmLocalGenerator* i : it.second) {
-      for (cmGeneratorTarget* ti : i->GetGeneratorTargets()) {
-        this->ComputeVSTargetDepends(ti);
+      for (const auto& ti : i->GetGeneratorTargets()) {
+        this->ComputeVSTargetDepends(ti.get());
       }
     }
   }
@@ -593,7 +594,7 @@ bool IsVisualStudioMacrosFileRegistered(const std::string& macrosFile,
         std::string filepath;
         std::string filepathname;
         std::string filepathpath;
-        if (cmSystemTools::FileExists(fullname.c_str())) {
+        if (cmSystemTools::FileExists(fullname)) {
           filename = cmSystemTools::GetFilenameName(fullname);
           filepath = cmSystemTools::GetFilenamePath(fullname);
           filepathname = cmSystemTools::GetFilenameName(filepath);
@@ -800,19 +801,9 @@ void RegisterVisualStudioMacros(const std::string& macrosFile,
 bool cmGlobalVisualStudioGenerator::TargetIsFortranOnly(
   cmGeneratorTarget const* gt)
 {
-  // check to see if this is a fortran build
-  {
-    // Issue diagnostic if the source files depend on the config.
-    std::vector<cmSourceFile*> sources;
-    if (!gt->GetConfigCommonSourceFiles(sources)) {
-      return false;
-    }
-  }
-
   // If there's only one source language, Fortran has to be used
   // in order for the sources to compile.
-  std::set<std::string> languages;
-  gt->GetLanguages(languages, "");
+  std::set<std::string> languages = gt->GetAllConfigCompileLanguages();
   // Consider an explicit linker language property, but *not* the
   // computed linker language that may depend on linked targets.
   // This allows the project to control the language choice in
@@ -927,7 +918,7 @@ void cmGlobalVisualStudioGenerator::AddSymbolExportCommand(
       std::string objFile = it;
       // replace $(ConfigurationName) in the object names
       cmSystemTools::ReplaceString(objFile, this->GetCMakeCFGIntDir(),
-                                   configName.c_str());
+                                   configName);
       if (cmHasLiteralSuffix(objFile, ".obj")) {
         fout << objFile << "\n";
       }
@@ -940,9 +931,10 @@ void cmGlobalVisualStudioGenerator::AddSymbolExportCommand(
 
   cmCustomCommandLines commandLines = cmMakeSingleCommandLine(
     { cmakeCommand, "-E", "__create_def", mdi->DefFile, objs_file });
-  cmCustomCommand command(gt->Target->GetMakefile(), outputs, empty, empty,
-                          commandLines, "Auto build dll exports", ".");
-  commands.push_back(command);
+  cmCustomCommand command(outputs, empty, empty, commandLines,
+                          gt->Target->GetMakefile()->GetBacktrace(),
+                          "Auto build dll exports", ".");
+  commands.push_back(std::move(command));
 }
 
 static bool OpenSolution(std::string sln)

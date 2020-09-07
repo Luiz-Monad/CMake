@@ -86,6 +86,20 @@ if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
   set(CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "")
   set(CMAKE_CUDA_HOST_IMPLICIT_LINK_DIRECTORIES "")
   set(CMAKE_CUDA_HOST_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
+
+  # We do not currently detect CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES but we
+  # do need to detect CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT from the compiler by
+  # looking at which cudart library exists in the implicit link libraries passed
+  # to the host linker.
+  if(CMAKE_CUDA_COMPILER_PRODUCED_OUTPUT MATCHES "link\\.exe [^\n]*cudart_static\\.lib")
+    set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "STATIC")
+  elseif(CMAKE_CUDA_COMPILER_PRODUCED_OUTPUT MATCHES "link\\.exe [^\n]*cudart\\.lib")
+    set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "SHARED")
+  else()
+    set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "NONE")
+  endif()
+  set(_SET_CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT
+    "set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT \"${CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT}\")")
 elseif(CMAKE_CUDA_COMPILER_ID STREQUAL NVIDIA)
   set(_nvcc_log "")
   string(REPLACE "\r" "" _nvcc_output_orig "${CMAKE_CUDA_COMPILER_PRODUCED_OUTPUT}")
@@ -179,6 +193,20 @@ elseif(CMAKE_CUDA_COMPILER_ID STREQUAL NVIDIA)
                                    log
                                    "${CMAKE_CUDA_IMPLICIT_OBJECT_REGEX}")
 
+    # Detect CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT from the compiler by looking at which
+    # cudart library exists in the implicit link libraries passed to the host linker.
+    # This is required when a project sets the cuda runtime library as part of the
+    # initial flags.
+    if(";${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES};" MATCHES [[;cudart_static(\.lib)?;]])
+      set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "STATIC")
+    elseif(";${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES};" MATCHES [[;cudart(\.lib)?;]])
+      set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "SHARED")
+    else()
+      set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "NONE")
+    endif()
+    set(_SET_CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT
+      "set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT \"${CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT}\")")
+
     file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
       "Parsed CUDA nvcc implicit link information from above output:\n${_nvcc_log}\n${log}\n\n")
   else()
@@ -186,33 +214,32 @@ elseif(CMAKE_CUDA_COMPILER_ID STREQUAL NVIDIA)
       "Failed to parsed CUDA nvcc implicit link information:\n${_nvcc_log}\n\n")
     message(FATAL_ERROR "Failed to extract nvcc implicit link line.")
   endif()
+endif()
 
-  set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES )
-  if(_nvcc_output_orig MATCHES "#\\\$ +INCLUDES= *([^\n]*)\n")
-    set(_nvcc_includes "${CMAKE_MATCH_1}")
-    string(APPEND _nvcc_log "  found 'INCLUDES=' string: [${_nvcc_includes}]\n")
-  else()
-    set(_nvcc_includes "")
-    string(REPLACE "\n" "\n    " _nvcc_output_log "\n${_nvcc_output_orig}")
-    string(APPEND _nvcc_log "  no 'INCLUDES=' string found in nvcc output:${_nvcc_output_log}\n")
-  endif()
-  if(_nvcc_includes)
-    # across all operating system each include directory is prefixed with -I
-    separate_arguments(_nvcc_output UNIX_COMMAND "${_nvcc_includes}")
-    foreach(line IN LISTS _nvcc_output)
-      string(REGEX REPLACE "^-I" "" line "${line}")
-      get_filename_component(line "${line}" ABSOLUTE)
-      list(APPEND CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES "${line}")
-    endforeach()
+set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES )
+string(REPLACE "\r" "" _nvcc_output_orig "${CMAKE_CUDA_COMPILER_PRODUCED_OUTPUT}")
+if(_nvcc_output_orig MATCHES "#\\\$ +INCLUDES= *([^\n]*)\n")
+  set(_nvcc_includes "${CMAKE_MATCH_1}")
+  string(APPEND _nvcc_log "  found 'INCLUDES=' string: [${_nvcc_includes}]\n")
+else()
+  set(_nvcc_includes "")
+  string(REPLACE "\n" "\n    " _nvcc_output_log "\n${_nvcc_output_orig}")
+  string(APPEND _nvcc_log "  no 'INCLUDES=' string found in nvcc output:${_nvcc_output_log}\n")
+endif()
+if(_nvcc_includes)
+  # across all operating system each include directory is prefixed with -I
+  separate_arguments(_nvcc_output NATIVE_COMMAND "${_nvcc_includes}")
+  foreach(line IN LISTS _nvcc_output)
+    string(REGEX REPLACE "^-I" "" line "${line}")
+    get_filename_component(line "${line}" ABSOLUTE)
+    list(APPEND CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES "${line}")
+  endforeach()
 
-    file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
-      "Parsed CUDA nvcc include information from above output:\n${_nvcc_log}\n${log}\n\n")
-  else()
-    file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
-      "Failed to detect CUDA nvcc include information:\n${_nvcc_log}\n\n")
-  endif()
-
-
+  file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
+    "Parsed CUDA nvcc include information from above output:\n${_nvcc_log}\n${log}\n\n")
+else()
+  file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
+    "Failed to detect CUDA nvcc include information:\n${_nvcc_log}\n\n")
 endif()
 
 # configure all variables set in this file
